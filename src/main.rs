@@ -7,4 +7,6 @@ fn main() {
 
     thread::parking();
     thread::condition_var();
+    thread::poisoning();
+    thread::arc_sharing();
 }
