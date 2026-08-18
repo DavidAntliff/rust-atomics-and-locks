@@ -1,12 +1,5 @@
-mod cell;
-mod thread;
+pub mod chapter1;
 
 fn main() {
-    cell::cell_to_thread();
-    cell::atomic_to_thread();
-
-    thread::parking();
-    thread::condition_var();
-    thread::poisoning();
-    thread::arc_sharing();
+    chapter1::run_all();
 }
