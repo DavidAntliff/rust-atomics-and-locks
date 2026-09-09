@@ -70,7 +70,7 @@ impl<T> SpinLock<T> {
         }
     }
 
-    pub fn lock(&self) -> Guard<T> {
+    pub fn lock(&self) -> Guard<'_, T> {
         while self.locked.swap(true, Acquire) {
             std::hint::spin_loop();  // no syscall
         }

@@ -24,7 +24,7 @@ pub fn happens_before() {
     }
 
     thread::scope(|s| {
-        for x in 0..1000 {
+        for _ in 0..1000 {
             s.spawn(|| {
                 while wait.load(Relaxed) {
                     thread::yield_now();

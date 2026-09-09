@@ -1,6 +1,6 @@
 use std::thread;
 
-mod spinlock;
+pub mod spinlock;
 
 pub fn run_all() {
     demo();

@@ -37,6 +37,7 @@ fn get_key() -> u64 {
 
 /// Race condition: multiple threads may generate a new key and overwrite each other.
 /// Callers may end up with the wrong key.
+#[allow(unused)]
 fn get_key_with_store() -> u64 {
     static KEY: AtomicU64 = AtomicU64::new(0);
     let key = KEY.load(Relaxed);
