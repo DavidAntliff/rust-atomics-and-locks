@@ -8,6 +8,7 @@ use std::ops::{Deref, DerefMut};
 use std::sync::atomic::AtomicU32;
 use std::sync::atomic::Ordering::{Acquire, Release};
 
+#[derive(Debug)]
 pub struct Mutex<T> {
     /// 0: unlocked, 1: locked
     state: AtomicU32,
@@ -38,7 +39,7 @@ impl<T> Mutex<T> {
     }
 }
 
-
+#[derive(Debug)]
 pub struct MutexGuard<'a, T> {
     mutex: &'a Mutex<T>,
 }
