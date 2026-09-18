@@ -1,11 +1,21 @@
+// Important note - wait() and wake_one() are not necessary for correctness,
+// but they are important for performance. Without them, this is an inefficient spinlock, but it
+// will still work correctly.
+//
+// The simple implementation makes a syscall for every lock and unlock.
+// We can avoid this in the uncontended case by introducing two locked states,
+// allowing us to avoid syscalls when there are no other waiters.
+
 use atomic_wait::{wait, wake_one};
 use std::cell::UnsafeCell;
 use std::ops::{Deref, DerefMut};
 use std::sync::atomic::AtomicU32;
-use std::sync::atomic::Ordering::{Acquire, Release};
+use std::sync::atomic::Ordering::{Acquire, Relaxed, Release};
 
 pub struct Mutex<T> {
-    /// 0: unlocked, 1: locked
+    /// 0: unlocked,
+    /// 1: locked, no other threads waiting
+    /// 2: locked, other threads waiting
     state: AtomicU32,
     value: UnsafeCell<T>,
 }
@@ -24,16 +34,18 @@ impl<T> Mutex<T> {
         }
     }
 
-    pub fn lock(&self) -> MutexGuard<T> {
-        // Set the state to 1: locked
-        while self.state.swap(1, Acquire) == 1 {
-            // If it was already locked, wait, unless the state is no longer 1
-            wait(&self.state, 1);
+    pub fn lock(&self) -> MutexGuard<'_, T> {
+        // Try setting the state from 0 to 1:
+        if self.state.compare_exchange(0, 1, Acquire, Relaxed).is_err() {
+            // Failed, so must already be in state 1 or 2 - try setting to 2
+            while self.state.swap(2, Acquire) != 0 {
+                // If the old value was not 0, it was already locked, so we can wait
+                wait(&self.state, 2);
+            } // else we changed it from 0 to 2
         }
         MutexGuard { mutex: self }
     }
 }
-
 
 pub struct MutexGuard<'a, T> {
     mutex: &'a Mutex<T>,
@@ -57,13 +69,9 @@ impl<T> DerefMut for MutexGuard<'_, T> {
 
 impl<T> Drop for MutexGuard<'_, T> {
     fn drop(&mut self) {
-        // Set the state back to 0: unlocked
-        self.mutex.state.store(0, Release);
-        // Wake up one of the waiting threads, if any
-        wake_one(&self.mutex.state);
+        if self.mutex.state.swap(0, Release) == 2 {
+            // There are other waiters
+            wake_one(&self.mutex.state);
+        }
     }
 }
-
-// Important note - wait() and wake_one() are not necessary for correctness,
-// but they are important for performance. Without them, this is an inefficient spinlock, but it
-// will still work correctly.
